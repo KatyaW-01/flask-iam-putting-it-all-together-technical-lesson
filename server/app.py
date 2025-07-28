@@ -7,6 +7,19 @@ from sqlalchemy.exc import IntegrityError
 from config import app, db, api
 from models import *
 
+#users can only access posts if logged in
+@app.before_request
+def check_if_logged_in():
+    open_access_list = [
+        'signup',
+        'login',
+        'check_session'
+    ]
+
+    if (request.endpoint) not in open_access_list and (not session.get('user_id')):
+        return {'error': '401 Unauthorized'}, 401
+
+
 class Signup(Resource):
     def post(self):
         request_json = request.get_json()
