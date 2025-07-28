@@ -51,11 +51,46 @@ class Logout(Resource):
             session['user_id'] = None
             return {}, 204
         return {}, 401
+    
+class PostIndex(Resource):
+    def get(self):
+        posts = [PostSchema().dump(post) for post in Post.query.all()]
+
+        return posts, 200
+    
+    def post(self):
+        request_json = request.get_json()
+
+        post = Post(
+            content=request_json.get('content'),
+            user_id=session['user_id']
+        )
+
+        try:
+            db.session.add(post)
+            db.session.commit()
+            return PostSchema().dump(post), 201
+
+        except IntegrityError:
+            return {'error': '422 Unprocessable Entity'}, 422
+        
+class Post(Resource):
+    def delete(self, id):
+        post = Post.query.filter(Post.id == id).first()
+
+        if post.user_id == session['user_id']:
+            db.session.delete(post)
+            db.session.commit()
+            return {}, 204
+        else:
+            return {'error': '403 Forbidden'}, 403
 
 api.add_resource(Signup, '/signup', endpoint='signup')
 api.add_resource(CheckSession, '/check_session', endpoint='check_session')
 api.add_resource(Login, '/login', endpoint='login')
 api.add_resource(Logout, '/logout', endpoint='logout')
+api.add_resource(PostIndex, '/posts', endpoint='posts')
+api.add_resource(Post, '/posts/<int:id>', endpoint='post')
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
