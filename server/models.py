@@ -8,8 +8,10 @@ class User(db.Model):
   __tablename__ = 'users'
 
   id = db.Column(db.Integer, primary_key=True)
-  username = db.Column(db.String)
+  username = db.Column(db.String, unique=True, nullable=False)
   _password_hash = db.Column(db.String)
+
+  posts = db.relationship('Post', back_populates='user')
 
   @hybrid_property
   def password_hash(self):
@@ -25,3 +27,30 @@ class User(db.Model):
 
   def __repr__(self):
     return f'<User {self.username}>'
+  
+class UserSchema(Schema):
+    id = fields.Int()
+    username = fields.String()
+
+    posts = fields.List(fields.Nested(lambda: PostSchema(exclude=("user",))))
+  
+class Post(db.Model):
+  __tablename__ = 'posts'
+  __table_args__ = (
+    db.CheckConstraint('length(content) <=400'),
+  )
+
+  id = db.Column(db.Integer, primary_key=True)
+  content = db.Column(db.String)
+
+  user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+  user = db.relationship('User', back_populates="posts")
+
+  def __repr__(self):
+    return f'<Post {self.id}: {self.content}>'
+  
+class PostSchema(Schema):
+    id = fields.Int()
+    content = fields.String()
+
+    user = fields.Nested(UserSchema(exclude=("posts",)))
